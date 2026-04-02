@@ -25,7 +25,6 @@ ARQUIVOS_MODELO = [
     "config.json",
     "generation_config.json",
     "model.safetensors",
-    "preprocessor_config.json",
     "processor_config.json",
     "special_tokens_map.json",
     "tokenizer.json",
@@ -44,7 +43,7 @@ async def lifespan(app: FastAPI):
     global processor, model, device
 
     modelo_path      = Path(MODELO_PATH)
-    tem_preprocessor = (modelo_path / "preprocessor_config.json").exists()
+    tem_preprocessor = (modelo_path / "processor_config.json").exists()
     tem_modelo       = (modelo_path / "model.safetensors").exists()
 
     # Log de diagnóstico
