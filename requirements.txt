@@ -1,10 +1,9 @@
 fastapi
 uvicorn
 python-multipart
-transformers
+transformers==4.37.2
 torch
 torchvision
 pdf2image
 Pillow
-huggingface_hub
 sentencepiece
