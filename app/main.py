@@ -1,6 +1,7 @@
 import os
 import json
 import torch
+import shutil
 import tempfile
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -26,9 +27,9 @@ ARQUIVOS_MODELO = [
     "generation_config.json",
     "model.safetensors",
     "processor_config.json",
-    "special_tokens_map.json",
     "tokenizer.json",
     "tokenizer_config.json",
+    "historico.json",
 ]
 
 processor = None
@@ -42,19 +43,17 @@ device    = None
 async def lifespan(app: FastAPI):
     global processor, model, device
 
-    modelo_path      = Path(MODELO_PATH)
-    tem_preprocessor = (modelo_path / "processor_config.json").exists()
-    tem_modelo       = (modelo_path / "model.safetensors").exists()
+    modelo_path = Path(MODELO_PATH)
+    tem_modelo  = (modelo_path / "model.safetensors").exists()
+    tem_config  = (modelo_path / "processor_config.json").exists()
 
     # Log de diagnóstico
     arquivos = list(modelo_path.iterdir()) if modelo_path.exists() else []
     print(f"📁 Arquivos no volume: {[f.name for f in arquivos]}")
-    print(f"   preprocessor_config.json : {tem_preprocessor}")
-    print(f"   model.safetensors        : {tem_modelo}")
+    print(f"   processor_config.json : {tem_config}")
+    print(f"   model.safetensors     : {tem_modelo}")
 
-    if tem_preprocessor and tem_modelo:
-        print("✅ Modelo completo encontrado. Carregando...")
-    else:
+    if not (tem_modelo and tem_config):
         print("⏳ Modelo incompleto ou ausente. Baixando arquivos individualmente...")
         modelo_path.mkdir(parents=True, exist_ok=True)
 
@@ -73,7 +72,18 @@ async def lifespan(app: FastAPI):
             print(f"   ✅ {arquivo} baixado!")
 
         print("✅ Todos os arquivos baixados!")
+    else:
+        print("✅ Modelo completo encontrado.")
 
+    # Cria preprocessor_config.json a partir do processor_config.json
+    # O DonutProcessor exige este arquivo mas o modelo treinado não o gera
+    preprocessor = modelo_path / "preprocessor_config.json"
+    processor_cfg = modelo_path / "processor_config.json"
+    if not preprocessor.exists() and processor_cfg.exists():
+        shutil.copy(str(processor_cfg), str(preprocessor))
+        print("✅ preprocessor_config.json criado a partir do processor_config.json")
+
+    print("⏳ Carregando modelo...")
     processor = DonutProcessor.from_pretrained(MODELO_PATH, local_files_only=True)
     model     = VisionEncoderDecoderModel.from_pretrained(MODELO_PATH, local_files_only=True)
     device    = torch.device("cuda" if torch.cuda.is_available() else "cpu")
