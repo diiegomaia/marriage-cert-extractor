@@ -3,6 +3,7 @@ import json
 import torch
 import tempfile
 from pathlib import Path
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, UploadFile, Header, HTTPException
 from fastapi.responses import JSONResponse
 from transformers import DonutProcessor, VisionEncoderDecoderModel
@@ -20,30 +21,47 @@ MAX_LENGTH  = 1280
 TASK_TOKEN  = "<s_certidao>"
 MODELO_PATH = "/app/modelo"
 
-app = FastAPI(title="Marriage Certificate Extractor")
+processor = None
+model     = None
+device    = None
 
 # ============================================================
-# Baixa o modelo apenas se o volume estiver vazio
+# Startup — baixa o modelo se necessário e carrega
 # ============================================================
-modelo_existe = Path(MODELO_PATH).exists() and any(Path(MODELO_PATH).iterdir())
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global processor, model, device
 
-if modelo_existe:
-    print("✅ Modelo encontrado no volume. Carregando...")
-else:
-    print("⏳ Volume vazio. Baixando modelo do HuggingFace...")
-    snapshot_download(
-        repo_id=HF_REPO,
-        token=HF_TOKEN,
-        local_dir=MODELO_PATH
+    modelo_existe = (
+        Path(MODELO_PATH).exists() and
+        any(Path(MODELO_PATH).iterdir())
     )
-    print("✅ Modelo baixado e salvo no volume!")
 
-processor = DonutProcessor.from_pretrained(MODELO_PATH, local_files_only=True)
-model     = VisionEncoderDecoderModel.from_pretrained(MODELO_PATH, local_files_only=True)
-device    = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model     = model.to(device)
-model.eval()
-print(f"✅ Modelo carregado no dispositivo: {device}")
+    if modelo_existe:
+        print("✅ Modelo encontrado no volume. Carregando...")
+    else:
+        print("⏳ Volume vazio. Baixando modelo do HuggingFace...")
+        Path(MODELO_PATH).mkdir(parents=True, exist_ok=True)
+        snapshot_download(
+            repo_id=HF_REPO,
+            token=HF_TOKEN,
+            local_dir=MODELO_PATH
+        )
+        print("✅ Modelo baixado e salvo no volume!")
+
+    processor = DonutProcessor.from_pretrained(MODELO_PATH, local_files_only=True)
+    model     = VisionEncoderDecoderModel.from_pretrained(MODELO_PATH, local_files_only=True)
+    device    = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    model.eval()
+    print(f"✅ Modelo carregado no dispositivo: {device}")
+
+    yield  # aplicação roda aqui
+
+    print("🛑 Encerrando aplicação...")
+
+
+app = FastAPI(title="Marriage Certificate Extractor", lifespan=lifespan)
 
 
 # ============================================================
