@@ -6,30 +6,25 @@ from pathlib import Path
 from fastapi import FastAPI, File, UploadFile, Header, HTTPException
 from fastapi.responses import JSONResponse
 from transformers import DonutProcessor, VisionEncoderDecoderModel
-from huggingface_hub import snapshot_download
 from pdf2image import convert_from_path
 from PIL import Image
 
 # ============================================================
 # Configurações
 # ============================================================
-API_KEY    = os.environ.get("API_KEY")
-HF_TOKEN   = os.environ.get("HF_TOKEN")
-HF_REPO    = os.environ.get("HF_REPO")
-MAX_LENGTH = 1280
-TASK_TOKEN = "<s_certidao>"
+API_KEY     = os.environ.get("API_KEY")
+MAX_LENGTH  = 1280
+TASK_TOKEN  = "<s_certidao>"
+MODELO_PATH = "./modelo"
 
 app = FastAPI(title="Marriage Certificate Extractor")
 
 # ============================================================
-# Carrega o modelo na inicialização
+# Carrega o modelo local na inicialização
 # ============================================================
-print("⏳ Baixando modelo do HuggingFace...")
-modelo_path = snapshot_download(repo_id=HF_REPO, token=HF_TOKEN)
-print(f"✅ Modelo baixado em: {modelo_path}")
-
-processor = DonutProcessor.from_pretrained(modelo_path)
-model     = VisionEncoderDecoderModel.from_pretrained(modelo_path)
+print("⏳ Carregando modelo local...")
+processor = DonutProcessor.from_pretrained(MODELO_PATH)
+model     = VisionEncoderDecoderModel.from_pretrained(MODELO_PATH)
 device    = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model     = model.to(device)
 model.eval()
@@ -76,7 +71,7 @@ def extrair_dados(caminho: str) -> dict:
 # ============================================================
 @app.get("/")
 def health_check():
-    return {"status": "ok", "model": HF_REPO}
+    return {"status": "ok", "modelo": MODELO_PATH}
 
 
 @app.post("/extrair")
@@ -84,15 +79,12 @@ async def extrair(
     file: UploadFile = File(...),
     x_api_key: str   = Header(...)
 ):
-    # Valida a chave
     if x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Chave de API inválida")
 
-    # Valida o tipo do arquivo
     if not file.filename.lower().endswith((".pdf", ".jpg", ".jpeg", ".png")):
         raise HTTPException(status_code=400, detail="Formato não suportado. Use PDF, JPG ou PNG")
 
-    # Salva o arquivo temporariamente
     sufixo = Path(file.filename).suffix
     with tempfile.NamedTemporaryFile(delete=False, suffix=sufixo) as tmp:
         tmp.write(await file.read())
@@ -113,5 +105,4 @@ async def extrair(
             }
         )
     finally:
-        # Remove o arquivo temporário
         os.unlink(tmp_path)
