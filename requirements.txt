@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 python-multipart
-transformers==4.40.0
+transformers==4.44.0
 tokenizers==0.22.2
 torch
 torchvision
