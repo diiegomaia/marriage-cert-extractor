@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI, File, UploadFile, Header, HTTPException
 from fastapi.responses import JSONResponse
 from transformers import DonutProcessor, VisionEncoderDecoderModel
+from huggingface_hub import snapshot_download
 from pdf2image import convert_from_path
 from PIL import Image
 
@@ -13,6 +14,8 @@ from PIL import Image
 # Configurações
 # ============================================================
 API_KEY     = os.environ.get("API_KEY")
+HF_TOKEN    = os.environ.get("HF_TOKEN")
+HF_REPO     = os.environ.get("HF_REPO")
 MAX_LENGTH  = 1280
 TASK_TOKEN  = "<s_certidao>"
 MODELO_PATH = "/app/modelo"
@@ -20,9 +23,21 @@ MODELO_PATH = "/app/modelo"
 app = FastAPI(title="Marriage Certificate Extractor")
 
 # ============================================================
-# Carrega o modelo local na inicialização
+# Baixa o modelo apenas se o volume estiver vazio
 # ============================================================
-print("⏳ Carregando modelo local...")
+modelo_existe = Path(MODELO_PATH).exists() and any(Path(MODELO_PATH).iterdir())
+
+if modelo_existe:
+    print("✅ Modelo encontrado no volume. Carregando...")
+else:
+    print("⏳ Volume vazio. Baixando modelo do HuggingFace...")
+    snapshot_download(
+        repo_id=HF_REPO,
+        token=HF_TOKEN,
+        local_dir=MODELO_PATH
+    )
+    print("✅ Modelo baixado e salvo no volume!")
+
 processor = DonutProcessor.from_pretrained(MODELO_PATH, local_files_only=True)
 model     = VisionEncoderDecoderModel.from_pretrained(MODELO_PATH, local_files_only=True)
 device    = torch.device("cuda" if torch.cuda.is_available() else "cpu")
