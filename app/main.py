@@ -76,7 +76,6 @@ async def lifespan(app: FastAPI):
         print("✅ Modelo completo encontrado.")
 
     # Cria preprocessor_config.json no formato correto
-    # O DonutProcessor exige este arquivo com image_processor_type na raiz
     preprocessor = modelo_path / "preprocessor_config.json"
     if not preprocessor.exists():
         preprocessor_content = {
@@ -98,7 +97,6 @@ async def lifespan(app: FastAPI):
             json.dump(preprocessor_content, f, indent=2)
         print("✅ preprocessor_config.json criado corretamente!")
     else:
-        # Garante que o arquivo existente tem o formato correto
         with open(str(preprocessor), "r") as f:
             content = json.load(f)
         if "image_processor_type" not in content:
@@ -106,6 +104,20 @@ async def lifespan(app: FastAPI):
             with open(str(preprocessor), "w") as f:
                 json.dump(content, f, indent=2)
             print("✅ preprocessor_config.json atualizado com image_processor_type!")
+
+    # Corrige tokenizer_config.json
+    tokenizer_cfg = modelo_path / "tokenizer_config.json"
+    if tokenizer_cfg.exists():
+        with open(str(tokenizer_cfg), "r") as f:
+            tcfg = json.load(f)
+        if tcfg.get("tokenizer_class") == "TokenizersBackend":
+            tcfg["tokenizer_class"] = "XLMRobertaTokenizerFast"
+            tcfg.pop("backend", None)
+            tcfg.pop("from_slow", None)
+            tcfg.pop("is_local", None)
+            with open(str(tokenizer_cfg), "w") as f:
+                json.dump(tcfg, f, indent=2)
+            print("✅ tokenizer_config.json corrigido!")
 
     print("⏳ Carregando modelo...")
     processor = DonutProcessor.from_pretrained(MODELO_PATH, local_files_only=True)
