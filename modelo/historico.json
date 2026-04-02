@@ -1,0 +1,42 @@
+[
+  {
+    "epoca": 1,
+    "train_loss": 0.544,
+    "val_loss": 0.3043
+  },
+  {
+    "epoca": 2,
+    "train_loss": 0.2606,
+    "val_loss": 0.2543
+  },
+  {
+    "epoca": 3,
+    "train_loss": 0.1899,
+    "val_loss": 0.2385
+  },
+  {
+    "epoca": 4,
+    "train_loss": 0.1458,
+    "val_loss": 0.2357
+  },
+  {
+    "epoca": 5,
+    "train_loss": 0.1137,
+    "val_loss": 0.2357
+  },
+  {
+    "epoca": 6,
+    "train_loss": 0.0887,
+    "val_loss": 0.2399
+  },
+  {
+    "epoca": 7,
+    "train_loss": 0.0696,
+    "val_loss": 0.2439
+  },
+  {
+    "epoca": 8,
+    "train_loss": 0.0565,
+    "val_loss": 0.2535
+  }
+]
