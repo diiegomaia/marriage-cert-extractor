@@ -75,13 +75,37 @@ async def lifespan(app: FastAPI):
     else:
         print("✅ Modelo completo encontrado.")
 
-    # Cria preprocessor_config.json a partir do processor_config.json
-    # O DonutProcessor exige este arquivo mas o modelo treinado não o gera
+    # Cria preprocessor_config.json no formato correto
+    # O DonutProcessor exige este arquivo com image_processor_type na raiz
     preprocessor = modelo_path / "preprocessor_config.json"
-    processor_cfg = modelo_path / "processor_config.json"
-    if not preprocessor.exists() and processor_cfg.exists():
-        shutil.copy(str(processor_cfg), str(preprocessor))
-        print("✅ preprocessor_config.json criado a partir do processor_config.json")
+    if not preprocessor.exists():
+        preprocessor_content = {
+            "data_format": "channels_first",
+            "do_align_long_axis": True,
+            "do_normalize": True,
+            "do_pad": True,
+            "do_rescale": True,
+            "do_resize": True,
+            "do_thumbnail": True,
+            "image_mean": [0.5, 0.5, 0.5],
+            "image_processor_type": "DonutImageProcessor",
+            "image_std": [0.5, 0.5, 0.5],
+            "resample": 2,
+            "rescale_factor": 0.00392156862745098,
+            "size": {"height": 1280, "width": 960}
+        }
+        with open(str(preprocessor), "w") as f:
+            json.dump(preprocessor_content, f, indent=2)
+        print("✅ preprocessor_config.json criado corretamente!")
+    else:
+        # Garante que o arquivo existente tem o formato correto
+        with open(str(preprocessor), "r") as f:
+            content = json.load(f)
+        if "image_processor_type" not in content:
+            content["image_processor_type"] = "DonutImageProcessor"
+            with open(str(preprocessor), "w") as f:
+                json.dump(content, f, indent=2)
+            print("✅ preprocessor_config.json atualizado com image_processor_type!")
 
     print("⏳ Carregando modelo...")
     processor = DonutProcessor.from_pretrained(MODELO_PATH, local_files_only=True)
