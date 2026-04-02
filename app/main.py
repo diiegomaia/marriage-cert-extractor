@@ -23,8 +23,8 @@ app = FastAPI(title="Marriage Certificate Extractor")
 # Carrega o modelo local na inicialização
 # ============================================================
 print("⏳ Carregando modelo local...")
-processor = DonutProcessor.from_pretrained(MODELO_PATH)
-model     = VisionEncoderDecoderModel.from_pretrained(MODELO_PATH)
+processor = DonutProcessor.from_pretrained(MODELO_PATH, local_files_only=True)
+model     = VisionEncoderDecoderModel.from_pretrained(MODELO_PATH, local_files_only=True)
 device    = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model     = model.to(device)
 model.eval()
