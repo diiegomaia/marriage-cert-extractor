@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, UploadFile, Header, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from transformers import DonutProcessor, VisionEncoderDecoderModel
 from huggingface_hub import hf_hub_download
@@ -47,7 +48,6 @@ async def lifespan(app: FastAPI):
     tem_modelo  = (modelo_path / "model.safetensors").exists()
     tem_config  = (modelo_path / "processor_config.json").exists()
 
-    # Log de diagnóstico
     arquivos = list(modelo_path.iterdir()) if modelo_path.exists() else []
     print(f"📁 Arquivos no volume: {[f.name for f in arquivos]}")
     print(f"   processor_config.json : {tem_config}")
@@ -133,6 +133,17 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Marriage Certificate Extractor", lifespan=lifespan)
+
+# ============================================================
+# CORS — permite chamadas do frontend
+# ============================================================
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Em produção substitua pelo domínio real
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # ============================================================
