@@ -15,7 +15,7 @@ from PIL import Image
 API_KEY     = os.environ.get("API_KEY")
 MAX_LENGTH  = 1280
 TASK_TOKEN  = "<s_certidao>"
-MODELO_PATH = "./modelo"
+MODELO_PATH = "/app/modelo"
 
 app = FastAPI(title="Marriage Certificate Extractor")
 
