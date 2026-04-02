@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, UploadFile, Header, HTTPException
 from fastapi.responses import JSONResponse
 from transformers import DonutProcessor, VisionEncoderDecoderModel
-from huggingface_hub import snapshot_download
+from huggingface_hub import hf_hub_download
 from pdf2image import convert_from_path
 from PIL import Image
 
@@ -20,6 +20,17 @@ HF_REPO     = os.environ.get("HF_REPO")
 MAX_LENGTH  = 1280
 TASK_TOKEN  = "<s_certidao>"
 MODELO_PATH = "/app/modelo"
+
+ARQUIVOS_MODELO = [
+    "config.json",
+    "generation_config.json",
+    "model.safetensors",
+    "preprocessor_config.json",
+    "processor_config.json",
+    "special_tokens_map.json",
+    "tokenizer.json",
+    "tokenizer_config.json",
+]
 
 processor = None
 model     = None
@@ -45,14 +56,24 @@ async def lifespan(app: FastAPI):
     if tem_preprocessor and tem_modelo:
         print("✅ Modelo completo encontrado. Carregando...")
     else:
-        print("⏳ Modelo incompleto ou ausente. Baixando do HuggingFace...")
+        print("⏳ Modelo incompleto ou ausente. Baixando arquivos individualmente...")
         modelo_path.mkdir(parents=True, exist_ok=True)
-        snapshot_download(
-            repo_id=HF_REPO,
-            token=HF_TOKEN,
-            local_dir=str(modelo_path)
-        )
-        print("✅ Download concluído!")
+
+        for arquivo in ARQUIVOS_MODELO:
+            destino = modelo_path / arquivo
+            if destino.exists():
+                print(f"   ⏭️  {arquivo} já existe, pulando...")
+                continue
+            print(f"   ⬇️  Baixando {arquivo}...")
+            hf_hub_download(
+                repo_id=HF_REPO,
+                filename=arquivo,
+                token=HF_TOKEN,
+                local_dir=str(modelo_path)
+            )
+            print(f"   ✅ {arquivo} baixado!")
+
+        print("✅ Todos os arquivos baixados!")
 
     processor = DonutProcessor.from_pretrained(MODELO_PATH, local_files_only=True)
     model     = VisionEncoderDecoderModel.from_pretrained(MODELO_PATH, local_files_only=True)
