@@ -32,22 +32,27 @@ device    = None
 async def lifespan(app: FastAPI):
     global processor, model, device
 
-    modelo_existe = (
-        Path(MODELO_PATH).exists() and
-        any(Path(MODELO_PATH).iterdir())
-    )
+    modelo_path      = Path(MODELO_PATH)
+    tem_preprocessor = (modelo_path / "preprocessor_config.json").exists()
+    tem_modelo       = (modelo_path / "model.safetensors").exists()
 
-    if modelo_existe:
-        print("✅ Modelo encontrado no volume. Carregando...")
+    # Log de diagnóstico
+    arquivos = list(modelo_path.iterdir()) if modelo_path.exists() else []
+    print(f"📁 Arquivos no volume: {[f.name for f in arquivos]}")
+    print(f"   preprocessor_config.json : {tem_preprocessor}")
+    print(f"   model.safetensors        : {tem_modelo}")
+
+    if tem_preprocessor and tem_modelo:
+        print("✅ Modelo completo encontrado. Carregando...")
     else:
-        print("⏳ Volume vazio. Baixando modelo do HuggingFace...")
-        Path(MODELO_PATH).mkdir(parents=True, exist_ok=True)
+        print("⏳ Modelo incompleto ou ausente. Baixando do HuggingFace...")
+        modelo_path.mkdir(parents=True, exist_ok=True)
         snapshot_download(
             repo_id=HF_REPO,
             token=HF_TOKEN,
-            local_dir=MODELO_PATH
+            local_dir=str(modelo_path)
         )
-        print("✅ Modelo baixado e salvo no volume!")
+        print("✅ Download concluído!")
 
     processor = DonutProcessor.from_pretrained(MODELO_PATH, local_files_only=True)
     model     = VisionEncoderDecoderModel.from_pretrained(MODELO_PATH, local_files_only=True)
@@ -56,7 +61,7 @@ async def lifespan(app: FastAPI):
     model.eval()
     print(f"✅ Modelo carregado no dispositivo: {device}")
 
-    yield  # aplicação roda aqui
+    yield
 
     print("🛑 Encerrando aplicação...")
 
