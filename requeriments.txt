@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-multipart
+transformers
+torch
+torchvision
+pdf2image
+Pillow
+huggingface_hub
+sentencepiece
