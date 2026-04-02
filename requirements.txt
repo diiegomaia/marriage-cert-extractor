@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 python-multipart
-transformers==4.37.2
+transformers==4.26.1
 torch
 torchvision
 pdf2image
