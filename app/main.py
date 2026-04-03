@@ -221,3 +221,17 @@ async def extrair(
         )
     finally:
         os.unlink(tmp_path)
+
+@app.get("/modelo-info")
+async def modelo_info():
+    import json
+    historico_path = Path(MODELO_PATH) / "historico.json"
+    if historico_path.exists():
+        with open(historico_path) as f:
+            historico = json.load(f)
+        return {
+            "epocas_treinadas": len(historico),
+            "melhor_val_loss": min(h["val_loss"] for h in historico),
+            "ultima_epoca": historico[-1]
+        }
+    return {"erro": "historico.json não encontrado"}
