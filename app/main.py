@@ -157,10 +157,18 @@ def carregar_imagem(caminho: str) -> Image.Image:
 
 
 def extrair_dados(caminho: str) -> dict:
-    imagem       = carregar_imagem(caminho)
-    pixel_values = processor(imagem, return_tensors="pt").pixel_values.to(device)
-    task_id      = processor.tokenizer.convert_tokens_to_ids(TASK_TOKEN)
+    import time
 
+    t0 = time.time()
+    imagem = carregar_imagem(caminho)
+    print(f"⏱️ carregar_imagem: {time.time()-t0:.2f}s", flush=True)
+
+    t1 = time.time()
+    pixel_values = processor(imagem, return_tensors="pt").pixel_values.to(device)
+    print(f"⏱️ processor:       {time.time()-t1:.2f}s", flush=True)
+
+    t2 = time.time()
+    task_id = processor.tokenizer.convert_tokens_to_ids(TASK_TOKEN)
     with torch.no_grad():
         outputs = model.generate(
             pixel_values,
@@ -172,8 +180,13 @@ def extrair_dados(caminho: str) -> dict:
             use_cache=True,
             num_beams=1,
         )
+    print(f"⏱️ model.generate:  {time.time()-t2:.2f}s", flush=True)
 
+    t3 = time.time()
     texto = processor.tokenizer.decode(outputs[0], skip_special_tokens=True)
+    print(f"⏱️ decode:          {time.time()-t3:.2f}s", flush=True)
+
+    print(f"⏱️ TOTAL:           {time.time()-t0:.2f}s", flush=True)
 
     try:
         return json.loads(texto)
